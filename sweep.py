@@ -28,11 +28,10 @@ def sample_wandb_hyperparams(params):
 
 
 default_config = {
-    "controller": {"type": "local"},
     "name": "test-mnist-proj",
     "method": "random",
     "parameters": {
-        "epochs": { "values": [100] },
+        "epochs": { "values": [10] },
         "beta": { "values": [0.0] },
         "rz_mode": { "values": ['standard'] },
         "z_variance_mode": { "values": ['sigma_diag'] },
@@ -96,7 +95,7 @@ def wandb_train(local=False):
         config["controller"] = {'type': 'local'}
         sampled_params = sample_wandb_hyperparams(config["parameters"])
         config["parameters"] = sampled_params
-        print(f"sampled params locally: {sampled_params}")
+        print(f"locally sampled params: {sampled_params}")
         wandb_kwargs['config'] = config
     with wandb.init(**wandb_kwargs) as run:
         config = wandb.config.as_dict()
@@ -106,6 +105,7 @@ def wandb_train(local=False):
             wandb_run=run,
             **config
         )
+
 
 if __name__ == "__main__":
     args = argparse.ArgumentParser()
@@ -117,9 +117,9 @@ if __name__ == "__main__":
     args = args.parse_args()
     project = args.proj
     experiment_name = args.exp_name
-    sweepcfg = exp_to_sweepconfig[experiment_name]
-    sweepcfg['name'] = project
     if args.sweep is None and not args.local_wandb:
+        sweepcfg = get_sweep_config(experiment_name)
+        sweepcfg['name'] = project
         sweep_id = wandb.sweep(sweepcfg, project=project)
         print(f"created new sweep {sweep_id}")
         wandb.agent(sweep_id, project=args.proj, count=args.n_runs, function=wandb_train)

@@ -16,8 +16,8 @@ def train(
     savemod=True,
     calculate_error=True,
     beta=100.0,
-    epochs=100,
-    latent_dims=None,
+    epochs=10,
+    latent_dims=[2,2],
     wandb_run=None,
     batch_size=64,
     lr=1e-4,
@@ -71,7 +71,8 @@ def train(
         z_variance_mode='logvar_diag',
         device=device,
         lr=lr,
-        out_type='image'
+        out_type='image',
+        wandb_run=wandb_run
     )
     path = f"MNIST_{str(model)}"
 
