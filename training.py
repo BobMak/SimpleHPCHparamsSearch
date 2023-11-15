@@ -96,7 +96,9 @@ def train(
             batch_size=batch_size,
             shuffle=True,
             num_workers=num_workers,
-            pin_memory=True
+            persistent_workers=True,          # considerable speedup whenever num_workers > 0
+            pin_memory=True,                  # speed up transfer to gpu
+            pin_memory_device=str(device),    # speed up transfer to gpu
         )
         model.fit(epochs, train_data_loader)
         if savemod:
@@ -108,7 +110,9 @@ def train(
         batch_size=len(test_data),
         shuffle=True,
         num_workers=num_workers,
+        persistent_workers=True,
         pin_memory=True,
+        pin_memory_device=str(device),
     )
     # calculate accuracy
     if calculate_error:

@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -326,6 +328,7 @@ class PMVIB(nn.Module):
         # trains for one epoch and calculates/logs optional metrics
         avg_loss = 0.0
         for i in range(epochs):
+            t0 = time.time()
             for xs, ys in train_data_loader:
                 x_ = xs.to(self.device)
                 y_ = ys.to(self.device)
@@ -338,7 +341,7 @@ class PMVIB(nn.Module):
                 if self.wandb_run:
                     self.log(loss)
             avg_loss /= len(train_data_loader)
-            print(f'epoch {i+1}/{epochs} loss: {avg_loss:.4f}')
+            print(f'epoch {i+1}/{epochs} loss: {avg_loss:.4f} ({time.time() - t0:.2f}s)')
 
     @staticmethod
     def load(path):
