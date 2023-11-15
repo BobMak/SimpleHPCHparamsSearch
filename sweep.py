@@ -106,7 +106,7 @@ def wandb_train(local=False):
             usesaved=False,
             savemod=False,
             wandb_run=run,
-            **config
+            **config['parameters']
         )
 
 
@@ -115,7 +115,7 @@ if __name__ == "__main__":
     args.add_argument("--sweep", type=str, default=None)
     args.add_argument("--n_runs", type=int, default=1)
     args.add_argument("--proj", type=str, default="test-mnist-proj")
-    args.add_argument("--local-wandb", type=bool, default=False)
+    args.add_argument("--local-wandb", type=bool, default=True)
     args.add_argument("--exp-name", type=str, default="beta_vs_recon")
     args = args.parse_args()
     project = args.proj
