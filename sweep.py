@@ -84,7 +84,10 @@ dataset = None
 def get_sweep_config(experiment_name):
     sweepcfg = exp_to_sweepconfig[experiment_name]
     cfg = default_config
+    params = cfg['parameters']
+    params.update(sweepcfg['parameters'])
     cfg.update(sweepcfg)
+    cfg['parameters'] = params
     cfg['name'] = project
     return cfg
 

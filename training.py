@@ -15,16 +15,21 @@ def train(
     usesaved=False,
     savemod=True,
     calculate_error=True,
-    beta=100.0,
-    epochs=10,
-    latent_dims=[2,2],
+    beta=None,
+    epochs=None,
+    latent_dims=None,
     wandb_run=None,
-    batch_size=64,
-    lr=1e-4,
+    batch_size=None,
+    lr=None,
+    z_variance_mode=None,
+    rz_mode=None,
     **kwargs
 ):
-    for k, v in kwargs.items():
-        print(f"ignoring {k}: {v}")
+    print(locals())
+    if kwargs:
+        print("WARNING: ignoring kwargs:")
+        for k, v in kwargs.items():
+            print(f"\t{k}: {v}")
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -68,7 +73,8 @@ def train(
         latent_dims=latent_dims,
         enc_arch=cnn_enc_arch,
         dec_arch=cnn_dec_arch,
-        z_variance_mode='logvar_diag',
+        z_variance_mode=z_variance_mode,
+        rz_mode=rz_mode,
         device=device,
         lr=lr,
         out_type='image',
