@@ -21,7 +21,6 @@ def train(
     wandb_run=None,
     batch_size=None,
     lr=None,
-    z_variance_mode=None,
     rz_mode=None,
     **kwargs
 ):
@@ -73,7 +72,6 @@ def train(
         latent_dims=latent_dims,
         enc_arch=cnn_enc_arch,
         dec_arch=cnn_dec_arch,
-        z_variance_mode=z_variance_mode,
         rz_mode=rz_mode,
         device=device,
         lr=lr,
@@ -139,7 +137,6 @@ if __name__ == "__main__":
     argparser.add_argument("--epochs", '-e', type=int, default=10)
     argparser.add_argument("--beta", '-b', type=float, default=10.0)
     argparser.add_argument("--rz_mode", "-rz", type=str, default="standard")
-    argparser.add_argument("--z_variance_mode", "-vm", type=str, default="logvar_diag")
     argparser.add_argument("--batch_size", "-bs", type=int, default=64)
     argparser.add_argument("--lr", "-lr", type=float, default=1e-4)
 

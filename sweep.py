@@ -34,9 +34,9 @@ default_config = {
         "epochs": { "values": [10] },
         "beta": { "values": [0.0] },
         "rz_mode": { "values": ['standard'] },
-        "z_variance_mode": { "values": ['sigma_diag'] },
         "batch_size": { "values": [128] },
         "lr": { "values": [1e-4] },
+        "latent_dims": {"values": [[2,2]]},
     }
 }
 # beta effect on reconstruction error
@@ -62,7 +62,6 @@ multiple_params = {
     "parameters": {
         "beta": { "values": [0.1] },
         "rz_mode": { "values": ['standard', 'parametrized'] },
-        "z_variance_mode": { "values": ['sigma_diag', 'sigma_chol', 'logvar_diag'] },
         "batch_size": { "values": [32, 64, 128, 256] },
         "lr": {
             "distribution": "log_uniform_values",

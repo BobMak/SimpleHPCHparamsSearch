@@ -64,7 +64,6 @@ class PMVIB(nn.Module):
                  out_type='categorical',
                  device=torch.device('cpu'),
                  rz_mode='standard',
-                 z_variance_mode='sigma_diag',
                  lr=1e-4,
                  wandb_run=None,
                  epochs=0,
@@ -75,11 +74,6 @@ class PMVIB(nn.Module):
         :param rz_mode: {'standard', 'parametrized',} determines the type of p(z) to use
         as a latent prior. 'standard' uses a standard normal distribution, 'parametrized' uses a
         multivariate gaussian with learnable parameters.
-        :param z_variance_mode: {'sigma_diag', 'sigma_chol'} determines the type of covariance matrix of Z.
-        'sigma_diag' learns entries of a diagonal covariance matrix and requires zn parameters for sigma.
-        This assumes independence between dimensions of zi.
-        'sigma_chol' learns non-zero entries of a lower triangular matrix and requires zn * (zn + 1) // 2 parameters.
-        This allows for correlation between dimensions of zi.
         """
         super(PMVIB, self).__init__()
         self.device = device
@@ -93,8 +87,6 @@ class PMVIB(nn.Module):
         self.in_size = in_size
         assert rz_mode in {'standard', 'parametrized'}
         self.rz_mode = rz_mode
-        assert z_variance_mode in {'sigma_diag', 'sigma_chol', 'logvar_diag'}
-        self.z_variance_mode = z_variance_mode
         self.beta = beta
         self.lr = lr
         self.epochs = epochs
@@ -118,26 +110,14 @@ class PMVIB(nn.Module):
 
         self.fc_mus = []
         self.fc_vars = []
-        if 'sigma' in z_variance_mode:
-            self.encode = self.logsigma_encode
-            self.reparameterize = self.logsigma_reparameterize
-            self.mixz = self.logsigma_mixz
-        elif 'logvar' in z_variance_mode:
-            self.encode = self.logvar_encode
-            self.reparameterize = self.logvar_reparameterize
-            self.mixz = self.logvar_mixz
+        self.encode = self.logvar_encode
+        self.reparameterize = self.logvar_reparameterize
+        self.mixz = self.logvar_mixz
         for i, ld in enumerate(latent_dims):
             fc_mu = nn.Sequential(
                 nn.Linear(encoder_size, ld),   # for full matrix
             ).to(device)
-            if z_variance_mode == 'sigma_chol':
-                sig_out = ld * (ld + 1) // 2
-            elif z_variance_mode == 'sigma_diag':
-                sig_out = ld
-            elif z_variance_mode == 'logvar_diag':
-                sig_out = ld
-            else:
-                raise ValueError(f'z_variance_mode {z_variance_mode} not recognized.')
+            sig_out = ld
             fc_var = nn.Sequential(
                 nn.Linear(encoder_size, sig_out),
             ).to(device)
@@ -243,10 +223,7 @@ class PMVIB(nn.Module):
         for i, encoder in enumerate(self.encoders):
             enc_out = encoder(input).flatten(start_dim=1)
             mu = self.fc_mus[i](enc_out)
-            if self.z_variance_mode == 'logvar_diag':
-                logvar = self.fc_vars[i](enc_out)
-            else:
-                raise ValueError(f'z_variance_mode {self.z_variance_mode} not recognized.')
+            logvar = self.fc_vars[i](enc_out)
             mus.append(mu)
             logvars.append(logvar)
         return [mus, logvars]
@@ -285,40 +262,6 @@ class PMVIB(nn.Module):
         # if not deterministic:
         z = self.reparameterize(mus, logvars)
         return [self.decode(z), inp, mus, logvars]
-
-    def logsigma_encode(self, input):
-        mus, sigmas = [], []
-        for i, encoder in enumerate(self.encoders):
-            enc_out = self.encoder(input).flatten(start_dim=1)
-            # Split the result into mu and var components
-            # of the latent Gaussian distribution
-            mu = self.fc_mus[i](enc_out)
-            if self.z_variance_mode == 'sigma_chol':
-                cholesky = self.fc_vars[i](enc_out)
-                cholesky = get_lower_triangular(cholesky, self.latent_dims[i], self.device)
-                sigma = torch.matmul(torch.swapaxes(cholesky, 1, 2), cholesky) + 1e-6 * torch.eye(self.latent_dims[i]).to(self.device)
-            elif self.z_variance_mode == 'sigma_diag':
-                sigma = self.fc_vars[i](enc_out).diag_embed()
-            mus.append(mu)
-            sigmas.append(sigma)
-
-        return [mus, sigmas]
-
-    def logsigma_reparameterize(self, mus, logsigmas):
-        """
-        Reparameterization trick to sample from N(0,1)
-        while preserving the log-scale.
-        :param mus: [(Tensor)] [[B x D], [B x D]]
-        :param sigma: [(Tensor)] [[B x D x D], [B x D x D]]
-        :return: (Tensor) [B x D]
-        """
-        z_all = []
-        for i, (mu, logsigma) in enumerate(zip(mus, logsigmas)):
-            eps = torch.randn_like(mu).view(-1, 1, self.latent_dims[i])
-            sigma = torch.exp(0.5 * logsigma)
-            z = mu + torch.bmm(eps, sigma).view(-1, self.latent_dims[i])
-            z_all.append(z)
-        return torch.cat(z_all, dim=1)
 
     def mixz(self, mus, logvars):
         raise NotImplementedError()
@@ -425,11 +368,7 @@ class PMVIB(nn.Module):
         return self
 
     def __str__(self):
-        var_char = '-'
-        if 'sigma' in self.z_variance_mode:
-            var_char = 's'
-        elif 'logvar' in self.z_variance_mode:
-            var_char = 'l'
+        var_char = 'l'
         return \
             (f'PMIBVAE_K{",".join([str(i) for i in self.latent_dims])}'
             f'beta{self.beta}x{self.epochs}'
